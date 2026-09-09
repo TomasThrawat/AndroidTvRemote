@@ -19,3 +19,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+The files app/src/main/proto/remotemessage.proto and app/src/main/proto/pairingmessage.proto
+are adapted from prior reverse-engineering work by the louis49/androidtv-remote and
+tronikos/androidtvremote2 projects (Apache License 2.0 / MIT), with comments cross-referenced
+against AOSP's frameworks/native/include/android/keycodes.h (Apache License 2.0).
