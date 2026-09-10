@@ -1,6 +1,7 @@
 package com.tomasthrawat.androidtvremote.ui
 
 import android.app.Activity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -46,16 +48,19 @@ private sealed class Screen {
  * Top-level screen: discover TVs on the network, pair with one (the TV shows
  * a 6-character code, typed in here), then show the remote control. All
  * network I/O runs on plain background threads for this first version - see
- * README.md "known limitations".
+ * README.md "known limitations". Discovery only runs while the user has
+ * pressed the search box; it does not scan automatically on screen load.
  */
 @Composable
 fun RemoteApp(activity: Activity) {
     val store = remember { PairedTvStore(activity) }
     var screen by remember { mutableStateOf<Screen>(Screen.Discovering) }
+    var searching by remember { mutableStateOf(false) }
     var found by remember { mutableStateOf(listOf<DiscoveredTv>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(searching) {
+        if (!searching) return@DisposableEffect onDispose {}
         val discovery = TvDiscovery(activity) { tv ->
             if (found.none { it.host == tv.host }) found = found + tv
         }
@@ -64,8 +69,18 @@ fun RemoteApp(activity: Activity) {
     }
 
     when (val current = screen) {
-        is Screen.Discovering -> DiscoveryList(found, error) { tv ->
+        is Screen.Discovering -> DiscoveryList(
+            searching = searching,
+            found = found,
+            error = error,
+            onSearchClick = {
+                found = emptyList()
+                error = null
+                searching = true
+            }
+        ) { tv ->
             error = null
+            searching = false
             val session = PairingSession(tv.host)
             Thread {
                 try {
@@ -98,17 +113,36 @@ fun RemoteApp(activity: Activity) {
 }
 
 @Composable
-private fun DiscoveryList(found: List<DiscoveredTv>, error: String?, onSelect: (DiscoveredTv) -> Unit) {
+private fun DiscoveryList(
+    searching: Boolean,
+    found: List<DiscoveredTv>,
+    error: String?,
+    onSearchClick: () -> Unit,
+    onSelect: (DiscoveredTv) -> Unit
+) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("أجهزة التلفزيون على الشبكة", style = MaterialTheme.typography.titleLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("أجهزة التلفزيون على الشبكة", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier
+                    .size(36.dp)
+                    .clickable(enabled = !searching) { onSearchClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🔍")
+            }
+        }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Spacer(Modifier.height(8.dp))
-        if (found.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        when {
+            !searching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("اضغط على 🔍 للبحث عن أجهزة التلفزيون")
+            }
+            found.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else {
-            LazyColumn {
+            else -> LazyColumn {
                 items(found) { tv ->
                     ListItem(
                         headlineContent = { Text(tv.name) },
