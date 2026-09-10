@@ -40,7 +40,7 @@ class TvDiscovery(context: Context, private val onFound: (DiscoveredTv) -> Unit)
     }
 
     fun stop() {
-        discoveryListener?.let { runCatching { nsdManager.stopDiscovery(it) } }
+        discoveryListener?.let { l -> runCatching { nsdManager.stopServiceDiscovery(l) } }
         discoveryListener = null
     }
 }
